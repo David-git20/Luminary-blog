@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found | Luminary Blog{% endblock %}
+
+{% block extra_head %}
+<style>
+    .error-container {
+        min-height: 60vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    .error-code {
+        font-size: 8rem;
+        font-weight: 800;
+        line-height: 1;
+        margin: 0;
+        background: linear-gradient(to right, var(--primary-color), #818cf8);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        opacity: 0.2;
+    }
+
+    .error-message {
+        margin-top: -2rem;
+    }
+
+    .error-message h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .error-message p {
+        color: #64748b;
+        font-size: 1.125rem;
+        max-width: 500px;
+        margin: 0 auto 2.5rem;
+    }
+
+    .error-actions {
+        display: flex;
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .error-code {
+            font-size: 5rem;
+        }
+
+        .error-message h1 {
+            font-size: 2rem;
+        }
+
+        .error-actions {
+            flex-direction: column;
+            width: 100%;
+            padding: 0 2rem;
+        }
+
+        .error-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-code">404</div>
+    <div class="error-message">
+        <h1>Lost in the Light?</h1>
+        <p>The page you're looking for seems to have vanished into the digital ether. Let's get you back on track.</p>
+        <div class="error-actions">
+            <a href="{{ url_for('index') }}" class="btn">Return Home</a>
+            <a href="{{ url_for('articles') }}" class="btn btn-outline"
+                style="text-decoration: none; display: flex; align-items: center;">Browse Articles</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

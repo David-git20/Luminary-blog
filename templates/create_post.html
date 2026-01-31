@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Article' if post else 'Create New Article' }} | Luminary Blog{% endblock %}
+
+{% block extra_head %}
+<style>
+    .composer-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    .composer-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        padding: 4rem;
+        border-radius: 2rem;
+        position: relative;
+    }
+
+    .composer-header {
+        margin-bottom: 3rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1.5rem;
+    }
+
+    .composer-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .composer-form {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 3rem;
+    }
+
+    .main-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .sidebar-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .form-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        background: #000;
+        border: 1px solid var(--border-color);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        color: white;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.3s ease;
+    }
+
+    .form-group textarea {
+        min-height: 150px;
+        resize: vertical;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+        border-color: var(--primary-color);
+    }
+
+    .image-dropzone {
+        border: 2px dashed var(--border-color);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .image-dropzone:hover {
+        border-color: var(--primary-color);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    #image-preview {
+        width: 100%;
+        height: 200px;
+        border-radius: 1rem;
+        object-fit: cover;
+        margin-top: 1rem;
+        display: none;
+    }
+
+    /* Feedback Overlay */
+    .feedback-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        border-radius: 2rem;
+    }
+
+    .feedback-overlay.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1.5rem;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    #image-preview.visible {
+        display: block;
+    }
+
+    /* Responsive Composer */
+    @media (max-width: 900px) {
+        .composer-card {
+            padding: 2.5rem 1.5rem;
+        }
+
+        .composer-form {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .composer-header h1 {
+            font-size: 2rem;
+        }
+
+        .main-fields {
+            gap: 1.5rem;
+        }
+
+        .sidebar-fields {
+            gap: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="composer-container">
+    <section class="composer-card">
+        <div class="feedback-overlay" id="feedbackOverlay">
+            <div class="spinner" id="feedbackSpinner"></div>
+            <h2 id="feedbackTitle">Publishing Article...</h2>
+            <p id="feedbackText" style="color: #64748b; margin-top: 0.5rem;"></p>
+        </div>
+
+        <div class="composer-header">
+            <h1>{{ 'Edit Article' if post else 'Create New Article' }}</h1>
+            <p style="color: #64748b; margin-top: 0.5rem;">{{ 'Update your thoughts for the Luminary community.' if post
+                else 'Share your thoughts with the Luminary community.' }}</p>
+        </div>
+
+        <form class="composer-form" id="postForm" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="main-fields">
+                <div class="form-group">
+                    <label for="title">Article Title</label>
+                    <input type="text" id="title" name="title" placeholder="The Future of..."
+                        value="{{ post.title if post else '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="summary">Short Summary</label>
+                    <textarea id="summary" name="summary" maxlength="300"
+                        placeholder="A brief hook for the article card..."
+                        required>{{ post.summary if post else '' }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="content">Article Content</label>
+                    <textarea id="content" name="content" style="min-height: 400px;"
+                        placeholder="Start writing your story..." required>{{ post.content if post else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="sidebar-fields">
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" required>
+                        <option value="Design" {{ 'selected' if post and post.category=='Design' else '' }}>Design
+                        </option>
+                        <option value="Technology" {{ 'selected' if post and post.category=='Technology' else '' }}>
+                            Technology</option>
+                        <option value="Architecture" {{ 'selected' if post and post.category=='Architecture' else '' }}>
+                            Architecture</option>
+                        <option value="Lifestyle" {{ 'selected' if post and post.category=='Lifestyle' else '' }}>
+                            Lifestyle</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cover Image</label>
+                    <div class="image-dropzone" onclick="document.getElementById('image').click()">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"
+                            fill="none" style="margin-bottom: 0.5rem;">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <p style="font-size: 0.875rem;">Click to upload image</p>
+                        <input type="file" id="image" name="image" accept="image/*" style="display: none;">
+                        <img id="image-preview" src="{{ post.image if post else '#' }}" alt="Preview"
+                            class="{{ 'visible' if post else '' }}">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="submit" class="btn" style="flex: 1;">{{ 'Update Article' if post else 'Publish Now'
+                        }}</button>
+                    {% if post %}
+                    <a href="{{ url_for('article', post_id=post.id) }}" class="btn btn-outline"
+                        style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Cancel</a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const postForm = document.getElementById('postForm');
+    const imageInput = document.getElementById('image');
+    const preview = document.getElementById('image-preview');
+    const feedbackOverlay = document.getElementById('feedbackOverlay');
+    const feedbackSpinner = document.getElementById('feedbackSpinner');
+    const feedbackTitle = document.getElementById('feedbackTitle');
+    const feedbackText = document.getElementById('feedbackText');
+
+    imageInput.onchange = evt => {
+        const [file] = imageInput.files;
+        if (file) {
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+        }
+    }
+
+    function showFeedback(title, text, isSuccess = false) {
+        feedbackOverlay.classList.add('active');
+        feedbackTitle.textContent = title;
+        feedbackText.textContent = text;
+        if (isSuccess) {
+            feedbackSpinner.style.display = 'none';
+            setTimeout(() => { window.location.href = "{{ url_for('articles') }}"; }, 1500);
+        } else {
+            feedbackSpinner.style.display = 'block';
+        }
+    }
+
+    postForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showFeedback('Publishing...', 'Saving your article to the cloud...');
+        const formData = new FormData(postForm);
+        const url = "{{ url_for('edit_post', post_id=post.id) if post else url_for('create_post') }}";
+        try {
+            const response = await fetch(url, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (response.ok) {
+                showFeedback('Success!', '{{ "Your article has been updated." if post else "Your article is now live." }}', true);
+            } else {
+                feedbackOverlay.classList.remove('active');
+                alert(data.error || 'Failed to publish article');
+            }
+        } catch (error) {
+            feedbackOverlay.classList.remove('active');
+            alert('An error occurred.');
+        }
+    });
+</script>
+{% endblock %}

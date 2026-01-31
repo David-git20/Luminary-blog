@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Articles | Luminary Blog{% endblock %}
+
+{% block content %}
+<section class="section-header">
+    <h1>All Articles</h1>
+    <p>Explore our full collection of insights and stories.</p>
+</section>
+
+<section class="posts-grid">
+    <div class="grid-container">
+        {% for article in articles %}
+        <article class="post-card" data-id="{{ article.id }}">
+            <div class="post-image" style="background-image: url('{{ article.image }}')"></div>
+            <div class="post-content">
+                <span class="post-category">{{ article.category }}</span>
+                <h3>{{ article.title }}</h3>
+                <p>{{ article.summary }}</p>
+                <div class="post-meta">
+                    <span>{{ article.date }}</span>
+                    <span class="dot"></span>
+                    <span>{{ article.read_time }}</span>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.post-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const articleId = card.dataset.id;
+                window.location.href = `/article/${articleId}`;
+            });
+        });
+    });
+</script>
+{% endblock %}

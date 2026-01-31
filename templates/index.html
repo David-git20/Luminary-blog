@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Second Testing | Luminary Blog{% endblock %}
+
+{% block content %}
+<section class="hero">
+    {% set hero = articles[0] if articles else None %}
+    <div class="hero-content">
+        {% if hero %}
+        <span class="badge">Featured Post</span>
+        <h1>{{ hero.title }}</h1>
+        <p>{{ hero.summary }}</p>
+        <div class="hero-meta">
+            <img src="{{ hero.author.profile_pic if hero.author.profile_pic else 'https://i.pravatar.cc/150?u=' + hero.author.email }}"
+                alt="Author" class="author-img">
+            <span class="author-name">{{ hero.author.name }}</span>
+            <span class="dot"></span>
+            <span class="read-time">{{ hero.read_time }}</span>
+        </div>
+        <a href="/article/{{ hero.id }}" class="btn">Read Article</a>
+        {% else %}
+        <span class="badge">Welcome</span>
+        <h1>Welcome to Luminary Blog</h1>
+        <p>Start your journey by creating your first article from your profile dashboard.</p>
+        <a href="{{ url_for('access') }}" class="btn">Get Started</a>
+        {% endif %}
+    </div>
+</section>
+
+<section class="posts-grid">
+    <div class="section-header">
+        <h2>Latest Articles</h2>
+        <a href="{{ url_for('articles') }}" class="view-all">View All</a>
+    </div>
+    <div class="grid-container">
+        {% for article in articles %}
+        <article class="post-card" data-id="{{ article.id }}">
+            <div class="post-image" style="background-image: url('{{ article.image }}')"></div>
+            <div class="post-content">
+                <span class="post-category">{{ article.category }}</span>
+                <h3>{{ article.title }}</h3>
+                <p>{{ article.summary }}</p>
+                <div class="post-meta">
+                    <span>{{ article.date }}</span>
+                    <span class="dot"></span>
+                    <span>{{ article.read_time }}</span>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="newsletter">
+    <div class="newsletter-card">
+        <h2>Stay in the Loop</h2>
+        <p>Subscribe to our newsletter for the latest design tips and tech insights delivered straight to your inbox.
+        </p>
+        <form class="subscribe-form">
+            <input type="email" placeholder="Enter your email" required>
+            <button type="submit" class="btn">Subscribe</button>
+        </form>
+    </div>
+</section>
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.post-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const articleId = card.dataset.id;
+                window.location.href = `/article/${articleId}`;
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,567 @@
+{% extends "base.html" %}
+
+{% block title %}Access & Security | Luminary Blog{% endblock %}
+
+{% block extra_head %}
+<style>
+    .access-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: grid;
+        gap: 4rem;
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    .access-container.authenticated-view {
+        grid-template-columns: 1.5fr 1fr;
+    }
+
+    .access-container.guest-view {
+        grid-template-columns: 1fr;
+        max-width: 600px;
+    }
+
+    .auth-section {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        padding: 4rem;
+        border-radius: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 3rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1rem;
+    }
+
+    .tab-btn {
+        background: none;
+        border: none;
+        color: #64748b;
+        font-size: 1.25rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: color 0.3s ease;
+        padding: 0;
+        position: relative;
+    }
+
+    .tab-btn.active {
+        color: var(--text-color);
+    }
+
+    .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1.1rem;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--primary-color);
+    }
+
+    .auth-forms-container {
+        position: relative;
+        min-height: 300px;
+    }
+
+    .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        transition: all 0.4s ease;
+    }
+
+    .auth-form.hidden {
+        display: none;
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .form-group input {
+        background: #000;
+        border: 1px solid var(--border-color);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        color: white;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus {
+        border-color: var(--primary-color);
+    }
+
+    .security-section {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .security-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        padding: 2rem;
+        border-radius: 1.5rem;
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .security-card:hover {
+        border-color: #334155;
+        transform: translateY(-2px);
+    }
+
+    .security-card h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1.125rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .security-card p {
+        margin: 0 0 1.5rem 0;
+        color: #64748b;
+        font-size: 0.9375rem;
+        line-height: 1.5;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .btn-outline {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+    }
+
+    .btn-outline:hover {
+        background: var(--glass-bg);
+        border-color: var(--text-color);
+    }
+
+    /* Success Message Overlay */
+    .feedback-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .feedback-overlay.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .feedback-overlay .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1.5rem;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Responsive Access */
+    @media (max-width: 900px) {
+        .access-container.authenticated-view {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .auth-section {
+            padding: 2.5rem 1.5rem;
+        }
+
+        .tabs {
+            gap: 1.5rem;
+        }
+
+        .tab-btn {
+            font-size: 1.125rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="access-container {{ 'authenticated-view' if current_user.is_authenticated else 'guest-view' }}">
+    <section class="auth-section">
+        <!-- Feedback Overlay -->
+        <div class="feedback-overlay" id="feedbackOverlay">
+            <div class="spinner" id="feedbackSpinner"></div>
+            <h2 id="feedbackTitle">Signing you in...</h2>
+            <p id="feedbackText" style="color: #64748b; margin-top: 0.5rem;"></p>
+        </div>
+
+        <div class="tabs">
+            {% if current_user.is_authenticated %}
+            <button class="tab-btn active">Security Management</button>
+            {% else %}
+            <button class="tab-btn active" data-tab="login">Login</button>
+            <button class="tab-btn" data-tab="register">Register</button>
+            {% endif %}
+        </div>
+
+        <div class="auth-forms-container">
+            {% if current_user.is_authenticated %}
+            <!-- Security Settings Forms (Visible when logged in) -->
+            <div id="securityForms">
+                <form class="auth-form" id="emailForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Update Email</h3>
+                    <div class="form-group">
+                        <label for="new-email">New Email Address</label>
+                        <input type="email" id="new-email" name="email" value="{{ current_user.email }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-small">Update Email</button>
+                </form>
+
+                <form class="auth-form" id="passwordForm" style="margin-top: 3rem;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Update Password</h3>
+                    <div class="form-group">
+                        <label for="old-password">Current Password</label>
+                        <input type="password" id="old-password" name="old_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">New Password</label>
+                        <input type="password" id="new-password" name="new_password" required>
+                    </div>
+                    <button type="submit" class="btn btn-small">Update Password</button>
+                </form>
+            </div>
+            {% else %}
+            <!-- Login Form -->
+            <form class="auth-form" id="loginForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" name="email" placeholder="name@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" name="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn">Sign In</button>
+                <p style="text-align: center; color: #64748b; font-size: 0.875rem; margin-top: 1rem;">
+                    <a href="#" style="color: inherit; text-decoration: none;">Forgot password?</a>
+                </p>
+            </form>
+
+            <!-- Register Form -->
+            <form class="auth-form hidden" id="registerForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" name="name" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" name="email" placeholder="name@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Password</label>
+                    <input type="password" id="reg-password" name="password" placeholder="••••••••" required
+                        minlength="8">
+                    <small style="color: #64748b; font-size: 0.75rem;">Minimum 8 characters</small>
+                </div>
+                <div class="form-group">
+                    <label for="reg-password-confirm">Confirm Password</label>
+                    <input type="password" id="reg-password-confirm" name="password_confirm" placeholder="••••••••"
+                        required minlength="8">
+                </div>
+                <button type="submit" class="btn">Create Account</button>
+                <p style="text-align: center; color: #64748b; font-size: 0.875rem; margin-top: 1rem;">
+                    By signing up, you agree to our Terms of Service.
+                </p>
+            </form>
+            {% endif %}
+        </div>
+    </section>
+
+    {% if current_user.is_authenticated %}
+    <aside class="security-section">
+        <div class="security-card">
+            <div class="status-badge" id="2faStatus">Enabled</div>
+            <h3>
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Two-Factor Auth
+            </h3>
+            <p>Add an extra layer of security to your account by requiring a code from your phone.</p>
+            <button class="btn btn-small btn-outline interactive-sec" data-action="2fa">Configure</button>
+        </div>
+
+        <div class="security-card">
+            <h3>
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                </svg>
+                Sessions
+            </h3>
+            <p>Manage and sign out of your active sessions on other devices.</p>
+            <div id="sessionList" style="display: none; margin-bottom: 1.5rem; font-size: 0.875rem; color: #64748b;">
+                <div
+                    style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                    <span>Chrome on MacOS</span>
+                    <span style="color: var(--text-color);">Active Now</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                    <span>Safari on iPhone</span>
+                    <a href="#" style="color: #ef4444; text-decoration: none;"
+                        onclick="this.parentElement.remove(); return false;">Revoke</a>
+                </div>
+            </div>
+            <button class="btn btn-small btn-outline interactive-sec" data-action="sessions">View All</button>
+        </div>
+
+        <div class="security-card">
+            <h3>
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                Account Recovery
+            </h3>
+            <p>Keep your recovery information up to date to ensure you never lose access.</p>
+            <button class="btn btn-small btn-outline interactive-sec" data-action="recovery">Update</button>
+        </div>
+    </aside>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab Toggling
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+
+    if (loginForm && registerForm) {
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                if (btn.dataset.tab === 'login') {
+                    loginForm.classList.remove('hidden');
+                    registerForm.classList.add('hidden');
+                } else if (btn.dataset.tab === 'register') {
+                    loginForm.classList.add('hidden');
+                    registerForm.classList.remove('hidden');
+                }
+            });
+        });
+    }
+
+    // Form Handling
+    const feedbackOverlay = document.getElementById('feedbackOverlay');
+    const feedbackSpinner = document.getElementById('feedbackSpinner');
+    const feedbackTitle = document.getElementById('feedbackTitle');
+    const feedbackText = document.getElementById('feedbackText');
+
+    function showFeedback(title, text, isSuccess = false) {
+        feedbackOverlay.classList.add('active');
+        feedbackTitle.textContent = title;
+        feedbackText.textContent = text;
+
+        if (isSuccess) {
+            feedbackSpinner.style.display = 'none';
+            setTimeout(() => {
+                window.location.href = "{{ url_for('profiles') }}";
+            }, 1500);
+        } else {
+            feedbackSpinner.style.display = 'block';
+        }
+    }
+
+    {% if current_user.is_authenticated %}
+    // Security Management Logic (Only loaded if user is logged in)
+    const emailForm = document.getElementById('emailForm');
+    const passwordForm = document.getElementById('passwordForm');
+
+    if (emailForm) {
+        emailForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showFeedback('Updating...', 'Applying your new email address...');
+            const formData = new FormData(emailForm);
+            try {
+                const response = await fetch('/update-email', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (response.ok) {
+                    showFeedback('Success!', 'Email updated successfully.', true);
+                    setTimeout(() => feedbackOverlay.classList.remove('active'), 2000);
+                } else {
+                    feedbackOverlay.classList.remove('active');
+                    alert(data.error);
+                }
+            } catch (e) { alert('An error occurred.'); feedbackOverlay.classList.remove('active'); }
+        });
+    }
+
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showFeedback('Updating...', 'Securing your new password...');
+            const formData = new FormData(passwordForm);
+            try {
+                const response = await fetch('/update-password', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (response.ok) {
+                    showFeedback('Success!', 'Password updated successfully.', true);
+                    passwordForm.reset();
+                    setTimeout(() => feedbackOverlay.classList.remove('active'), 2000);
+                } else {
+                    feedbackOverlay.classList.remove('active');
+                    alert(data.error);
+                }
+            } catch (e) { alert('An error occurred.'); feedbackOverlay.classList.remove('active'); }
+        });
+    }
+    {% else %}
+    // Auth Logic (Only loaded if user is a guest)
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showFeedback('Signing you in...', 'Connecting to Luminary Secure...');
+
+            const formData = new FormData(loginForm);
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showFeedback('Welcome Back!', 'Redirecting to your profile...', true);
+                } else {
+                    feedbackOverlay.classList.remove('active');
+                    alert(data.error || 'Login failed');
+                }
+            } catch (error) {
+                feedbackOverlay.classList.remove('active');
+                alert('An error occurred. Please try again.');
+            }
+        });
+    }
+
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Validate password confirmation
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-password-confirm').value;
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match. Please try again.');
+                return;
+            }
+
+            showFeedback('Creating Account...', 'Setting up your Luminary workspace...');
+
+            const formData = new FormData(registerForm);
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showFeedback('Account Created!', 'Let\'s get you started...', true);
+                    setTimeout(() => {
+                        window.location.reload(); // Refresh to show security management
+                    }, 2000);
+                } else {
+                    feedbackOverlay.classList.remove('active');
+                    alert(data.error || 'Registration failed');
+                }
+            } catch (error) {
+                feedbackOverlay.classList.remove('active');
+                alert('An error occurred. Please try again.');
+            }
+        });
+    }
+    {% endif %}
+
+    // Security Interactivity
+    const secBtns = document.querySelectorAll('.interactive-sec');
+
+    secBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const action = btn.dataset.action;
+
+            if (action === '2fa') {
+                const status = document.getElementById('2faStatus');
+                const isEnabled = status.textContent === 'Enabled';
+
+                if (isEnabled) {
+                    status.textContent = 'Disabled';
+                    status.style.background = 'rgba(239, 68, 68, 0.1)';
+                    status.style.color = '#ef4444';
+                    btn.textContent = 'Enable';
+                } else {
+                    status.textContent = 'Enabled';
+                    status.style.background = 'rgba(34, 197, 94, 0.1)';
+                    status.style.color = '#22c55e';
+                    btn.textContent = 'Configure';
+                }
+            } else if (action === 'sessions') {
+                const list = document.getElementById('sessionList');
+                const isVisible = list.style.display === 'block';
+                list.style.display = isVisible ? 'none' : 'block';
+                btn.textContent = isVisible ? 'View All' : 'Hide Sessions';
+            } else if (action === 'recovery') {
+                alert('Account recovery form coming soon! This would typically open a modal to update your phone or email.');
+            }
+        });
+    });
+</script>
+{% endblock %}

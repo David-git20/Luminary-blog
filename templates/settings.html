@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Account Settings | Luminary Blog{% endblock %}
+
+{% block extra_head %}
+<style>
+    .settings-container {
+        max-width: 800px;
+        margin: 0 auto;
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    .settings-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        padding: 4rem;
+        border-radius: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .settings-header {
+        margin-bottom: 3rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1.5rem;
+    }
+
+    .settings-header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .settings-header p {
+        color: #64748b;
+        margin: 0.5rem 0 0 0;
+    }
+
+    .settings-form {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .form-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        background: #000;
+        border: 1px solid var(--border-color);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        color: white;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.3s ease;
+    }
+
+    .form-group textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+        border-color: var(--primary-color);
+    }
+
+    /* Feedback Overlay */
+    .feedback-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .feedback-overlay.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .feedback-overlay .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1.5rem;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <section class="settings-card">
+        <!-- Feedback Overlay -->
+        <div class="feedback-overlay" id="feedbackOverlay">
+            <div class="spinner" id="feedbackSpinner"></div>
+            <h2 id="feedbackTitle">Updating Profile...</h2>
+            <p id="feedbackText" style="color: #64748b; margin-top: 0.5rem;"></p>
+        </div>
+
+        <div class="settings-header">
+            <h1>Personal Information</h1>
+            <p>Manage your public profile information.</p>
+        </div>
+
+        <form class="settings-form" id="infoForm" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="profile_pic">Profile Picture</label>
+                <div style="display: flex; align-items: center; gap: 1.5rem;">
+                    <img src="{{ current_user.profile_pic if current_user.profile_pic else 'https://i.pravatar.cc/150?u=' + current_user.email }}"
+                        id="imgPreview"
+                        style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color);">
+                    <input type="file" id="profile_pic" name="profile_pic" accept="image/*"
+                        style="border: none; padding: 0;">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" value="{{ current_user.name }}" required>
+            </div>
+            <div class="form-group">
+                <label for="bio">Short Bio</label>
+                <textarea id="bio" name="bio" required>{{ current_user.bio }}</textarea>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button type="submit" class="btn">Save Changes</button>
+                <a href="{{ url_for('profiles') }}" class="btn btn-outline"
+                    style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Cancel</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const infoForm = document.getElementById('infoForm');
+    const profilePicInput = document.getElementById('profile_pic');
+    const imgPreview = document.getElementById('imgPreview');
+
+    profilePicInput.onchange = evt => {
+        const [file] = profilePicInput.files;
+        if (file) {
+            imgPreview.src = URL.createObjectURL(file);
+        }
+    }
+
+    const feedbackOverlay = document.getElementById('feedbackOverlay');
+    const feedbackSpinner = document.getElementById('feedbackSpinner');
+    const feedbackTitle = document.getElementById('feedbackTitle');
+    const feedbackText = document.getElementById('feedbackText');
+
+    function showFeedback(title, text, isSuccess = false) {
+        feedbackOverlay.classList.add('active');
+        feedbackTitle.textContent = title;
+        feedbackText.textContent = text;
+
+        if (isSuccess) {
+            feedbackSpinner.style.display = 'none';
+            setTimeout(() => {
+                window.location.href = "{{ url_for('profiles') }}";
+            }, 1500);
+        } else {
+            feedbackSpinner.style.display = 'block';
+        }
+    }
+
+    infoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showFeedback('Saving...', 'Updating your profile information...');
+
+        const formData = new FormData(infoForm);
+        try {
+            const response = await fetch('/update-info', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                showFeedback('Success!', 'Your profile has been updated.', true);
+            } else {
+                feedbackOverlay.classList.remove('active');
+                alert(data.error || 'Update failed');
+            }
+        } catch (error) {
+            feedbackOverlay.classList.remove('active');
+            alert('An error occurred. Please try again.');
+        }
+    });
+</script>
+{% endblock %}
